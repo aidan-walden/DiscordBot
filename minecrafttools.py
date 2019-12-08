@@ -106,65 +106,22 @@ class MinecraftPlayer:
                 self.playerConnectionChange(False)
             time.sleep(15)
 
-
 async def getServerInfo(serverIp):
     '''Returns basic info about a Minecraft server at the given IP.'''
-    import subprocess
-    while(True):
-        result = subprocess.Popen(['mcstatus', serverIp, 'status'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        stdout,stderr = result.communicate()
-        if 'Traceback' in stdout.decode():
-            if 'No connection could be made' in stdout.decode() or 'timed out' in stdout.decode():
-                return 'That server is currently not running.'
-            else:
-                await asyncio.sleep(5)
-                continue
-        output = stdout.decode().splitlines()
-        version = output[0].split(': ')[1].split('(')[0][:-1][1:]
-        motd = output[1].split(': ')[2].replace("'", '')[:-2]
-        playersout = ""
-        if '0/' in output[2].split(': ')[1]:
-            playersout = 'No players connected.'
-        else:
-            players = output[2].split(': ')[1].split("['")[1]
-            i = 0
-            for player in players.split(','):
-                if i == len(players.split(',')) - 1:
-                    playerStr = str(player.split('(')[0][:-1])
-                else:
-                    playerStr = str(player.split('(')[0][:-1]) + ', '
-                if playerStr[1] == "'":
-                    playerStr = playerStr[2:]
-                playersout += playerStr
-                i += 1
-        return "Version: " + version + "\nMOTD: " + motd + "\nPlayers: " + playersout
+    from mcstatus import MinecraftServer
+
+    server = MinecraftServer.lookup(serverIp)
+    try:
+        status = server.status()
+    except:
+        return "That server is either offline or has an invalid IP address."
+    return f"Ping: {status.latency} Players online: {status.players.online}"
 
 async def getServerPlayers(serverIp):
     '''Returns the names of players on a Minecraft server at the given IP.'''
-    import subprocess
-    while(True):
-        result = subprocess.Popen(['mcstatus', serverIp, 'status'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        stdout,stderr = result.communicate()
-        if 'Traceback' in stdout.decode():
-            if 'No connection could be made' in stdout.decode() or 'timed out' in stdout.decode():
-                return 'That server is currently not running.'
-            else:
-                await asyncio.sleep(5)
-                continue
-        output = stdout.decode().splitlines()
-        playersout = ""
-        if '0/' in output[2].split(': ')[1]:
-            playersout = 'No players connected.'
-        else:
-            players = output[2].split(': ')[1].split("['")[1]
-            i = 0
-            for player in players.split(','):
-                if i == len(players.split(',')) - 1:
-                    playerStr = str(player.split('(')[0][:-1])
-                else:
-                    playerStr = str(player.split('(')[0][:-1]) + ', '
-                if playerStr[1] == "'":
-                    playerStr = playerStr[2:]
-                playersout += playerStr
-                i += 1
-        return playersout
+    from mcstatus import MinecraftServer
+
+    server = MinecraftServer.lookup(serverIp)
+    query = server.query()
+
+    return query.players.names
